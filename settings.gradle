@@ -1,6 +1,7 @@
 pluginManagement {
 	repositories {
 		maven { url = "https://maven.fabricmc.net/" }
+		maven { url = "https://maven.neoforged.net/releases" }
 		maven { url = "https://maven.minecraftforge.net/" }
 		mavenCentral()
 		gradlePluginPortal()
@@ -11,7 +12,11 @@ plugins {
 	id "org.gradle.toolchains.foojay-resolver-convention" version "+"
 }
 
-include("fabric")
-include("forge")
+if (startParameter.projectProperties.get("skipFabric") == "true") {
+	include("forge")
+} else {
+	include("fabric")
+	include("forge")
+}
 
 rootProject.name = "Minecraft-Transit-Railway"

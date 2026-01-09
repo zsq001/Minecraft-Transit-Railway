@@ -25,7 +25,6 @@ public class ItemPSDAPGBase extends ItemExtension implements IBlock {
 	}
 
 	@Nonnull
-	@Override
 	public ActionResult useOnBlock2(ItemUsageContext context) {
 		final int horizontalBlocks = item.isDoor ? type.isOdd ? 3 : 2 : 1;
 		if (blocksNotReplaceable(context, horizontalBlocks, type.isPSD ? 3 : 2, getBlockStateFromItem().getBlock())) {
@@ -61,7 +60,6 @@ public class ItemPSDAPGBase extends ItemExtension implements IBlock {
 		return ActionResult.SUCCESS;
 	}
 
-	@Override
 	public void addTooltips(ItemStack stack, @Nullable World world, List<MutableText> tooltip, TooltipContext options) {
 		tooltip.add((type.isLift ? type.isOdd ? TranslationProvider.TOOLTIP_MTR_RAILWAY_SIGN_ODD : TranslationProvider.TOOLTIP_MTR_RAILWAY_SIGN_EVEN : item.translationKey).getMutableText().formatted(TextFormatting.GRAY));
 	}

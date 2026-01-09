@@ -36,6 +36,11 @@ public final class PersistentStateData extends PersistenceStateExtension {
 		return compoundTag;
 	}
 
+	@Override
+	public net.minecraft.nbt.CompoundTag save(net.minecraft.nbt.CompoundTag compoundTag, net.minecraft.core.HolderLookup.Provider provider) {
+		return writeNbt2(new CompoundTag(compoundTag)).data;
+	}
+
 	public boolean getRouteIdHasDisabledAnnouncements(long routeId) {
 		return routeIdsWithDisabledAnnouncements.contains(routeId);
 	}

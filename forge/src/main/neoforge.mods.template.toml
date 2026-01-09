@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[36,)"
+loaderVersion = "@loaderVersionRange@"
 license = "MIT"
 
 [[mods]]
@@ -11,15 +11,15 @@ description = "A Minecraft mod that adds automated train systems into the game."
 logoFile = "icon.png"
 
 [[dependencies.mtr]]
-modId = "forge"
-mandatory = true
-versionRange = "[36,)"
+modId = "neoforge"
+type = "required"
+versionRange = "@neoForgeVersionRange@"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.mtr]]
 modId = "minecraft"
-mandatory = true
+type = "required"
 versionRange = "[@minecraft@]"
 ordering = "NONE"
 side = "BOTH"

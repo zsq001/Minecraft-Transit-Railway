@@ -22,7 +22,6 @@ public abstract class ItemDriverKey extends ItemExtension {
 		this.color = color;
 	}
 
-	@Override
 	public void addTooltips(ItemStack stack, @Nullable World world, List<MutableText> tooltip, TooltipContext options) {
 		if (canBoardAnyVehicle) {
 			tooltip.add(TranslationProvider.TOOLTIP_MTR_CAN_BOARD_ANY_VEHICLE_TRUE.getMutableText().formatted(TextFormatting.GOLD));

@@ -16,6 +16,8 @@ import org.mtr.mod.client.CustomResourceLoader;
 import org.mtr.mod.data.VehicleExtension;
 import org.mtr.mod.resource.*;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import javax.annotation.Nullable;
 import java.util.function.BiConsumer;
 
@@ -85,6 +87,10 @@ public final class DynamicVehicleModel extends EntityModelExtension<EntityAbstra
 
 	@Override
 	public void render(GraphicsHolder graphicsHolder, int light, int overlay, float red, float green, float blue, float alpha) {
+	}
+
+	@Override
+	public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int packedColor) {
 	}
 
 	public void render(StoredMatrixTransformations storedMatrixTransformations, @Nullable VehicleExtension vehicle, int carNumber, int[] scrollingDisplayIndexTracker, int light, ObjectArrayList<ObjectDoubleImmutablePair<Box>> openDoorways, boolean fromResourcePackCreator) {
