@@ -62,17 +62,18 @@ public class BuildTools {
 		path = project.getProjectDir().toPath();
 		version = project.getVersion().toString();
 		majorVersion = Integer.parseInt(minecraftVersion.split("\\.")[1]);
-		javaLanguageVersion = majorVersion <= 16 ? 8 : majorVersion == 17 ? 16 : 17;
+		javaLanguageVersion = majorVersion <= 16 ? 8 : majorVersion == 17 ? 16 : majorVersion >= 21 ? 21 : 17;
 
-		final Path accessWidenerPath = path.resolve("src/main/resources").resolve(loader.equals("fabric") ? "" : "META-INF");
+		final String mappingLoader = loader.equals("neoforge") ? "forge" : loader;
+		final Path accessWidenerPath = path.resolve("src/main/resources").resolve(mappingLoader.equals("fabric") ? "" : "META-INF");
 		Files.createDirectories(accessWidenerPath);
-		CreateAccessWidener.create(minecraftVersion, loader, accessWidenerPath.resolve(loader.equals("fabric") ? "mtr.accesswidener" : "accesstransformer.cfg"));
+		CreateAccessWidener.create(minecraftVersion, mappingLoader, accessWidenerPath.resolve(mappingLoader.equals("fabric") ? "mtr.accesswidener" : "accesstransformer.cfg"));
 
 		final Path mixinPath = path.resolve("src/main/java/org/mtr/mixin");
 		Files.createDirectories(mixinPath);
-		CreateClientWorldRenderingMixin.create(minecraftVersion, loader, mixinPath, "org.mtr.mixin");
-		CreatePlayerTeleportationStateAccessor.create(minecraftVersion, loader, mixinPath, "org.mtr.mixin");
-		CreatePlayerRendererOffsetMixin.create(minecraftVersion, loader, mixinPath, "org.mtr.mixin");
+		CreateClientWorldRenderingMixin.create(minecraftVersion, mappingLoader, mixinPath, "org.mtr.mixin");
+		CreatePlayerTeleportationStateAccessor.create(minecraftVersion, mappingLoader, mixinPath, "org.mtr.mixin");
+		CreatePlayerRendererOffsetMixin.create(minecraftVersion, mappingLoader, mixinPath, "org.mtr.mixin");
 	}
 
 	public String getFabricVersion() {
@@ -92,6 +93,9 @@ public class BuildTools {
 	}
 
 	public boolean hasJadeSupport() {
+		if (loader.equals("neoforge")) {
+			return false;
+		}
 		return loader.equals("fabric") ? majorVersion >= 17 : majorVersion >= 19;
 	}
 
@@ -100,11 +104,14 @@ public class BuildTools {
 			return loader.equals("fabric") ? "10.4.0" : "10.1.1"; // 1.19.4 version not working
 		}
 		final String modIdString = "jade";
-		final String[] fileNameSplit = new ModId(modIdString, ModProvider.MODRINTH).getModFiles(minecraftVersion, loader.equals("fabric") ? ModLoader.FABRIC : ModLoader.FORGE, "").get(0).fileName.split("-");
+		final String[] fileNameSplit = new ModId(modIdString, ModProvider.MODRINTH).getModFiles(minecraftVersion, getModLoader(), "").get(0).fileName.split("-");
 		return fileNameSplit[fileNameSplit.length - 1].split("\\.jar")[0] + (minecraftVersion.equals("1.20.1") ? "+" + loader : "");
 	}
 
 	public boolean hasWthitSupport() {
+		if (loader.equals("neoforge")) {
+			return false;
+		}
 		return majorVersion >= 17;
 	}
 
@@ -116,7 +123,7 @@ public class BuildTools {
 			return loader + "-8.17.0";
 		}
 		final String modIdString = "wthit";
-		return new ModId(modIdString, ModProvider.MODRINTH).getModFiles(minecraftVersion, loader.equals("fabric") ? ModLoader.FABRIC : ModLoader.FORGE, "").get(0).fileName.split("\\.jar")[0].replace(modIdString + "-", "");
+		return new ModId(modIdString, ModProvider.MODRINTH).getModFiles(minecraftVersion, getModLoader(), "").get(0).fileName.split("\\.jar")[0].replace(modIdString + "-", "");
 	}
 
 	public String getModMenuVersion() {
@@ -129,6 +136,40 @@ public class BuildTools {
 
 	public String getForgeVersion() {
 		return getJson("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json").getAsJsonObject().getAsJsonObject("promos").get(minecraftVersion + "-latest").getAsString();
+	}
+
+	public String getNeoForgeVersion() {
+		final String[] versionSplit = minecraftVersion.split("\\.");
+		final int minorVersion = versionSplit.length > 2 ? Integer.parseInt(versionSplit[2]) : 0;
+		final String versionPrefix = majorVersion + "." + minorVersion + ".";
+		final String metadata = getString("https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml");
+		return Stream.of(metadata.split("<version>"))
+				.skip(1)
+				.map(value -> value.substring(0, value.indexOf("</version>")))
+				.filter(version -> version.startsWith(versionPrefix))
+				.max((first, second) -> compareVersions(first, second))
+				.orElseThrow(() -> new RuntimeException("NeoForge version not found for " + minecraftVersion));
+	}
+
+	private ModLoader getModLoader() {
+		if (loader.equals("fabric")) {
+			return ModLoader.FABRIC;
+		} else {
+			return ModLoader.FORGE;
+		}
+	}
+
+	private int compareVersions(String first, String second) {
+		final String[] firstSplit = first.split("\\.");
+		final String[] secondSplit = second.split("\\.");
+		for (int i = 0; i < Math.max(firstSplit.length, secondSplit.length); i++) {
+			final int firstValue = i < firstSplit.length ? Integer.parseInt(firstSplit[i]) : 0;
+			final int secondValue = i < secondSplit.length ? Integer.parseInt(secondSplit[i]) : 0;
+			if (firstValue != secondValue) {
+				return Integer.compare(firstValue, secondValue);
+			}
+		}
+		return 0;
 	}
 
 	public void downloadTranslations(String crowdinKey, String geminiKey) throws IOException, InterruptedException {
@@ -366,6 +407,34 @@ public class BuildTools {
 		}
 
 		return new JsonObject();
+	}
+
+	private static String getString(String url, String... requestProperties) {
+		for (int i = 0; i < 5; i++) {
+			try {
+				final HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+				connection.setUseCaches(false);
+
+				for (int j = 0; j < requestProperties.length / 2; j++) {
+					connection.setRequestProperty(requestProperties[2 * j], requestProperties[2 * j + 1]);
+				}
+
+				try (final InputStream inputStream = connection.getInputStream()) {
+					return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+				} catch (Exception e) {
+					LOGGER.error("", e);
+				}
+			} catch (Exception e) {
+				LOGGER.error("", e);
+			}
+			try {
+				Thread.sleep(1000);
+			} catch (Exception e) {
+				LOGGER.error("", e);
+			}
+		}
+
+		throw new RuntimeException("Failed to fetch " + url);
 	}
 
 	private static String getGemini(String key, String content, String systemInstruction) throws IOException {

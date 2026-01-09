@@ -17,7 +17,6 @@ public abstract class ItemBlockClickingBase extends ItemExtension {
 	}
 
 	@Nonnull
-	@Override
 	public ActionResult useOnBlock2(ItemUsageContext context) {
 		if (!context.getWorld().isClient()) {
 			if (clickCondition(context)) {
@@ -41,7 +40,6 @@ public abstract class ItemBlockClickingBase extends ItemExtension {
 		}
 	}
 
-	@Override
 	public void addTooltips(ItemStack stack, @Nullable World world, List<MutableText> tooltip, TooltipContext options) {
 		final CompoundTag compoundTag = stack.getOrCreateTag();
 		final long posLong = compoundTag.getLong(TAG_POS);

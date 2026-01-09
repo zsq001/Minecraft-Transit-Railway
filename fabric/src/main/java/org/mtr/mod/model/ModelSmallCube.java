@@ -1,5 +1,7 @@
 package org.mtr.mod.model;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.mtr.mapping.holder.EntityAbstractMapping;
 import org.mtr.mapping.holder.Identifier;
 import org.mtr.mapping.mapper.EntityModelExtension;
@@ -39,5 +41,9 @@ public class ModelSmallCube extends EntityModelExtension<EntityAbstractMapping> 
 
 	@Override
 	public final void render(GraphicsHolder graphicsHolder, int light, int overlay, float red, float green, float blue, float alpha) {
+	}
+
+	@Override
+	public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int packedColor) {
 	}
 }

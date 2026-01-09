@@ -1,5 +1,7 @@
 package org.mtr.mod.model;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.mtr.core.data.InterchangeColorsForStationName;
 import org.mtr.core.data.NameColorDataBase;
 import org.mtr.libraries.it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -44,6 +46,10 @@ public abstract class ModelTrainBase extends EntityModelExtension<EntityAbstract
 
 	@Override
 	public final void render(GraphicsHolder graphicsHolder, int light, int overlay, float red, float green, float blue, float alpha) {
+	}
+
+	@Override
+	public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, int packedColor) {
 	}
 
 	public final void render(StoredMatrixTransformations storedMatrixTransformations, @Nullable NameColorDataBase data, Identifier texture, int light, float doorLeftValue, float doorRightValue, boolean opening, int currentCar, int trainCars, boolean head1IsFront, boolean lightsOn, boolean isTranslucent, boolean renderDetails, boolean atPlatform) {

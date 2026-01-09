@@ -1,5 +1,6 @@
 package org.mtr.mod.entity;
 
+import net.minecraft.network.syncher.SynchedEntityData;
 import org.mtr.mapping.holder.EntityType;
 import org.mtr.mapping.holder.MinecraftClient;
 import org.mtr.mapping.holder.Vector3d;
@@ -20,6 +21,10 @@ public class EntityRendering extends EntityExtension {
 
 	@Override
 	protected void initDataTracker2() {
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 	}
 
 	@Override

@@ -1,47 +1,40 @@
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.mtr.core.Generator
+import org.mtr.core.WebserverSetup
 import org.mtr.mod.BuildTools
 
 plugins {
-	id "net.minecraftforge.gradle" version "6.+"
-	id "org.spongepowered.mixin" version "+"
+	id "net.neoforged.gradle.userdev" version "7.0.170"
 }
 
-final BuildTools buildTools = new BuildTools(minecraftVersion, "forge", project)
+final BuildTools buildTools = new BuildTools(minecraftVersion, "neoforge", project)
+final String neoForgeVersion = buildTools.getNeoForgeVersion()
+final String neoForgeVersionRange = "[${neoForgeVersion},)"
+final String loaderVersionRange = "[2,)"
 
-minecraft {
-	mappings channel: "official", version: minecraftVersion
-	accessTransformer = file("src/main/resources/META-INF/accesstransformer.cfg")
-	runs {
-		configureEach {
-			property "forge.logging.markers", "REGISTRIES"
-			property "forge.logging.console.level", "debug"
-		}
-		client {}
-		server { args "--nogui" }
+runs {
+	configureEach {
+		systemProperty "forge.logging.markers", "REGISTRIES"
+		systemProperty "forge.logging.console.level", "debug"
+		modSource project.sourceSets.main
 	}
+	client {}
+	server { argument "--nogui" }
 }
 
 sourceSets.main.resources { srcDir "src/generated/resources" }
 
 dependencies {
-	minecraft "net.minecraftforge:forge:${minecraftVersion}-${buildTools.getForgeVersion()}"
-	annotationProcessor "org.spongepowered:mixin:+:processor"
-	shadowImplementation "org.mtr:Minecraft-Mappings-forge-${minecraftVersion}:0.0.1-dev"
+	implementation "net.neoforged:neoforge:${neoForgeVersion}"
+	shadowImplementation "org.mtr:Minecraft-Mappings-forge-1.20.4:0.0.1-dev"
 
 	if (buildTools.hasJadeSupport()) {
-		compileOnly fg.deobf("maven.modrinth:jade:${buildTools.getJadeVersion()}")
+		compileOnly "maven.modrinth:jade:${buildTools.getJadeVersion()}"
 	}
 
 	if (buildTools.hasWthitSupport()) {
-		compileOnly fg.deobf("mcp.mobius.waila:wthit-api:${buildTools.getWthitVersion()}")
+		compileOnly "mcp.mobius.waila:wthit-api:${buildTools.getWthitVersion()}"
 	}
-}
-
-mixin {
-	add sourceSets.main, "mtr.refmap.json"
-	config "mtr.mixins.json"
-	debug.verbose = true
-	debug.export = true
 }
 
 java {
@@ -53,11 +46,12 @@ java {
 }
 
 tasks.register("setupFiles") {
+	outputs.upToDateWhen { false }
 	copy {
 		outputs.upToDateWhen { false }
-		from "src/main/mods.template.toml"
+		from "src/main/neoforge.mods.template.toml"
 		into "src/main/resources/META-INF"
-		filter(ReplaceTokens, tokens: ["minecraft": minecraftVersion, "version": version])
+		filter(ReplaceTokens, tokens: ["minecraft": minecraftVersion, "version": version, "loaderVersionRange": loaderVersionRange, "neoForgeVersionRange": neoForgeVersionRange])
 		rename "(.+).template.toml", "\$1.toml"
 	}
 
@@ -82,6 +76,29 @@ tasks.register("setupFiles") {
 		outputs.upToDateWhen { false }
 		from "../fabric/src/main/java/org/mtr/core"
 		into "src/main/java/org/mtr/core"
+	}
+
+	copy {
+		outputs.upToDateWhen { false }
+		from "../fabric/src/main/java/org/mtr/mixin"
+		into "src/main/java/org/mtr/mixin"
+		filter { line ->
+			line.replace("net.minecraft.server.network.ServerPlayerEntity", "net.minecraft.server.level.ServerPlayer")
+					.replace("ServerPlayerEntity.class", "ServerPlayer.class")
+					.replace("net.minecraft.client.network.AbstractClientPlayerEntity", "net.minecraft.client.player.AbstractClientPlayer")
+					.replace("net.minecraft.client.render.entity.PlayerEntityRenderer", "net.minecraft.client.renderer.entity.player.PlayerRenderer")
+					.replace("PlayerEntityRenderer.class", "PlayerRenderer.class")
+					.replace("net.minecraft.util.math.Vec3d", "net.minecraft.world.phys.Vec3")
+					.replace("AbstractClientPlayerEntity", "AbstractClientPlayer")
+					.replace("Vec3d", "Vec3")
+					.replace("getUuid()", "getUUID()")
+					.replace("getPositionOffset(Lnet/minecraft/client/network/AbstractClientPlayer;F)Lnet/minecraft/util/math/Vec3;", "getRenderOffset(Lnet/minecraft/client/player/AbstractClientPlayer;F)Lnet/minecraft/world/phys/Vec3;")
+					.replace("getPositionOffset(Lnet/minecraft/client/network/AbstractClientPlayerEntity;F)Lnet/minecraft/util/math/Vec3d;", "getRenderOffset(Lnet/minecraft/client/player/AbstractClientPlayer;F)Lnet/minecraft/world/phys/Vec3;")
+					.replace("net.minecraft.client.world.ClientWorld", "net.minecraft.client.multiplayer.ClientLevel")
+					.replace("net.minecraft.entity.Entity", "net.minecraft.world.entity.Entity")
+					.replace("ClientWorld.class", "ClientLevel.class")
+					.replace("(ClientWorld)", "(ClientLevel)")
+		}
 	}
 
 	copy {
@@ -125,21 +142,46 @@ tasks.register("setupFiles") {
 		delete fileTree("src/main/java/org/mtr/init/WthitConfig.java")
 		delete fileTree("src/main/resources/wthit_plugins.json")
 	}
+
+	copy {
+		outputs.upToDateWhen { false }
+		from "../fabric/src/main/KeysTemplate.java"
+		into "src/main/java/org/mtr/mod"
+		filter(ReplaceTokens, tokens: ["version": version + "+" + minecraftVersion, "server": testServer, "debug": debug])
+		rename "(.+)Template.java", "\$1.java"
+	}
+
+	buildTools.getPatreonList(patreonApiKey)
+	buildTools.generateTranslations()
+	Generator.generateJava(project, "schema/config", "mod/generated/config", false, "mod.config")
+	Generator.generateJava(project, "schema/resource", "mod/generated/resource", false, "core.data", "mod.resource")
+	Generator.generateJava(project, "schema/legacy", "legacy/generated/resource", false)
+	WebserverSetup.setup(project.rootDir, "forge/", "mod")
+}
+
+tasks.named("compileJava").configure {
+	dependsOn("setupFiles")
 }
 
 build {
 	doLast {
-		buildTools.copyBuildFile(excludeAssets == "true")
+		if (tasks.named("shadowJar").get().enabled) {
+			buildTools.copyBuildFile(excludeAssets == "true")
+		} else {
+			final String suffix = excludeAssets == "true" ? "-server" : ""
+			copy {
+				from "build/libs/${project.name}-${version}.jar"
+				into "${project.rootDir}/build/release"
+				rename { "MTR-neoforge-${version}+${minecraftVersion}${suffix}.jar" }
+			}
+		}
 	}
 }
 
 shadowJar {
-	finalizedBy "reobfShadowJar"
 	exclude excludeAssets == "true" ? "assets" : "abc123"
 }
 
-reobf {
-	shadowJar {}
+tasks.named("shadowJar").configure {
+	enabled = false
 }
-
-assemble.dependsOn shadowJar
